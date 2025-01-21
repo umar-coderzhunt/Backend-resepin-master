@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  app:
+    image: recipe-site # Yahan apne app ka Docker image daalein
+    build: . # Agar aapka app ka source code isi directory mein hai
+    ports:
+      - "4000:4000" # Map your server port (local:container)
+    environment:
+      - SERVER_PORT=4000
+      - DB_HOST=${DB_HOST}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_PORT=${DB_PORT}
+      - SECRET_KEY=${SECRET_KEY}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    env_file:
+      - .env # Isse aapki .env file se variables load ho jayenge
+
+  db:
+    image: postgres:latest # PostgreSQL container ka image
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_DATABASE}
+    ports:
+      - "${DB_PORT}:5432" # PostgreSQL port mapping
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persistent storage ke liye
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
