@@ -30,10 +30,15 @@ console.log("PORT", PORT)
 app.listen(PORT, () => {
   console.log(`example app listening at http://localhost:${PORT}`)
 })
-app.all('*', (req, res, next) => {
-  next(new CreateError.NotFound())
-})
+// app.all('http://localhost:3000/', (req, res, next) => {
+//   next(new CreateError.NotFound())
+// })
+const corsOptions = {
+  origin: 'http://localhost:3000', // Allow requests from this origin
+  credentials: true,              // Allow credentials (cookies, authorization headers)
+};
 
+app.use(cors(corsOptions));
 app.use((err, req, res, next) => {
   const messError = err.message || 'internal server error'
   const statusCode = err.status || 500

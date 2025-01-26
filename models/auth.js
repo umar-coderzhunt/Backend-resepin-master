@@ -9,6 +9,8 @@ const findByEmail = (email) => {
         if (!err) {
           resolve(result)
         } else {
+          console.log(err, "models");
+
           reject(new Error(err))
         }
       }
@@ -38,21 +40,48 @@ const create = ({
     )
   })
 }
-const getprofil = (iduser) => {
+const getprofile = (iduser) => {
   return new Promise((resolve, reject) => {
     pool.query(
-      'SELECT * from users WHERE iduser = $1',
+      'SELECT * FROM users WHERE iduser = $1',
       [iduser],
       (err, result) => {
+        if (err) {
+          return reject(new Error(`Database query error: ${err.message}`));
+        }
+        if (result.rows.length === 0) {
+          return reject(new Error(`User with id ${iduser} not found`));
+        }
+        resolve(result.rows[0]); // Return the first matching row
+      }
+    );
+  });
+};
+
+const updateProfile = ({ fullname, email, avatar }) => {
+  return new Promise((resolve, reject) => {
+    pool.query(
+      `
+      UPDATE users 
+      SET 
+        fullname = COALESCE($1, fullname),
+        avatar = COALESCE($2, avatar),
+        updated_at = NOW()
+      WHERE email = $3
+      RETURNING *;
+      `,
+      [fullname, avatar, email], // Correct parameter order
+      (err, result) => {
         if (!err) {
-          resolve(result)
+          resolve(result.rows[0]); // Return the updated row
         } else {
-          reject(new Error(err))
+          reject(new Error(err));
         }
       }
-    )
-  })
-}
+    );
+  });
+};
+
 const activasi = ({ active = '1', email }) => {
   return new Promise((resolve, reject) => {
     pool.query(
@@ -69,55 +98,55 @@ const activasi = ({ active = '1', email }) => {
   })
 }
 
-const updateProfile = ({
-  fullname,
-  email,
-  phonenumber,
-  jobs,
-  workplace,
-  address,
-  description,
-  skill,
-  image,
-  active,
-  role,
-  idportfolio,
-  idexperience,
-  instagram,
-  github,
-  idemployee
-}) => {
-  return new Promise((resolve, reject) => {
-    pool.query(
-      'UPDATE employee SET fullname = COALESCE($1, fullname), email = COALESCE($2, email), phonenumber = COALESCE($3, phonenumber), jobs = COALESCE($4, jobs), workplace = COALESCE($5, workplace), address = COALESCE($6, address), description = COALESCE($7, description), skill = COALESCE($8, skill), image = COALESCE($9, image), active = COALESCE($10, active), role = COALESCE($11, role), idportfolio = COALESCE($12, idportfolio), idexperience = COALESCE($13, idexperience),instagram = COALESCE($14, instagram),github = COALESCE($15, github) WHERE idemployee = $16',
-      [
-        fullname,
-        email,
-        phonenumber,
-        jobs,
-        workplace,
-        address,
-        description,
-        skill,
-        image,
-        active,
-        role,
-        idportfolio,
-        idexperience,
-        instagram,
-        github,
-        idemployee
-      ],
-      (err, result) => {
-        if (!err) {
-          resolve(result)
-        } else {
-          reject(new Error(err))
-        }
-      }
-    )
-  })
-}
+// const updateProfile = ({
+//   fullname,
+//   email,
+//   phonenumber,
+//   jobs,
+//   workplace,
+//   address,
+//   description,
+//   skill,
+//   image,
+//   active,
+//   role,
+//   idportfolio,
+//   idexperience,
+//   instagram,
+//   github,
+//   idemployee
+// }) => {
+//   return new Promise((resolve, reject) => {
+//     pool.query(
+//       'UPDATE employee SET fullname = COALESCE($1, fullname), email = COALESCE($2, email), phonenumber = COALESCE($3, phonenumber), jobs = COALESCE($4, jobs), workplace = COALESCE($5, workplace), address = COALESCE($6, address), description = COALESCE($7, description), skill = COALESCE($8, skill), image = COALESCE($9, image), active = COALESCE($10, active), role = COALESCE($11, role), idportfolio = COALESCE($12, idportfolio), idexperience = COALESCE($13, idexperience),instagram = COALESCE($14, instagram),github = COALESCE($15, github) WHERE idemployee = $16',
+//       [
+//         fullname,
+//         email,
+//         phonenumber,
+//         jobs,
+//         workplace,
+//         address,
+//         description,
+//         skill,
+//         image,
+//         active,
+//         role,
+//         idportfolio,
+//         idexperience,
+//         instagram,
+//         github,
+//         idemployee
+//       ],
+//       (err, result) => {
+//         if (!err) {
+//           resolve(result)
+//         } else {
+//           reject(new Error(err))
+//         }
+//       }
+//     )
+//   })
+// }
 const changePassword = (body) => {
   return new Promise((resolve, reject) => {
     pool.query(
@@ -159,6 +188,6 @@ module.exports = {
   create,
   updateProfile,
   changePassword,
-  getprofil,
+  getprofile,
   activasi
 }

@@ -11,50 +11,61 @@ const foodController = {
         common.response(res, result, 'get data portfolio', 200)
       })
       .catch((error) => {
-        console.log(error)
+        console.log("pp", error)
         next(createError)
       })
   },
   CreateFood: async (req, res, next) => {
-    try {
-      const gambarvid = req.files.video.map((file) => {
-        return `http://${req.get('host')}/video/${file.filename}`
-      })
-      console.log(gambarvid)
-      // console.log(req.files.image[0].filename);
-      const gambars = req.files.image[0].path
-      console.log(gambars)
-      const ress = await cloudinary.uploader.upload(gambars, {
-        folder: 'resepin'
-      })
-      // console.log(ress)
+    console.log("mama");
 
-      const video = req.files.video[0].path
-      console.log(video)
+    try {
+      // Prepare video URLs
+      const gambarvid = req.files.video.map((file) => {
+        return `http://${req.get('host')}/video/${file.filename}`;
+      });
+      console.log(gambarvid);
+
+      // Upload image to Cloudinary
+      const gambars = req.files.image[0].path;
+      console.log(gambars);
+      const ress = await cloudinary.uploader.upload(gambars, {
+        folder: 'resepin',
+      });
+
+      // Upload video to Cloudinary
+      const video = req.files.video[0].path;
+      console.log(video);
       const resVideo = await cloudinary.uploader.upload(video, {
         folder: 'resepin',
-        resource_type: 'video'
-      })
-      console.log(resVideo)
-      const { title, ingrediens } = req.body
+        resource_type: 'video',
+      });
+      console.log(resVideo);
+
+      // Prepare data
+      const { title, ingrediens } = req.body;
+
+      // Ensure `ingrediens` is an array
+      const parsedIngrediens =
+        typeof ingrediens === 'string' ? ingrediens.split(',') : ingrediens;
+
       const data = {
         title,
-        ingrediens,
+        ingrediens: parsedIngrediens, // Pass array to the model
         video: resVideo.url,
-        image: ress.url
-      }
-      // console.log(
-      //   `http://${req.get("host")}/video/${req.files.image[0].filename}`
-      // );
-      // console.log(cloudinary.uploader.upload(data.image))
+        image: ress.url,
+
+      };
+
+      // Insert into the database
       foodModel.insert({ ...data }).then(() => {
-        common.response(res, data, 'data success create', 200)
-      })
+        common.response(res, data, 'data success create', 200);
+      });
     } catch (error) {
-      console.log(error)
-      next(createError)
+      console.log(error);
+      next(createError);
     }
   },
+
   getDetail: (req, res, next) => {
     const idfood = req.params.id
     foodModel
@@ -69,45 +80,69 @@ const foodController = {
   },
   updateFood: async (req, res, next) => {
     try {
-      const gambarvid = req.files.video.map((file) => {
-        return `http://${req.get('host')}/video/${file.filename}`
-      })
-      const gambars = req.files.image[0].path
-      // console.log(req.file)
-      const ress = await cloudinary.uploader.upload(gambars)
-      // const gambar = JSON.stringify(gambarvid)
-      const video = req.files.video[0].path
-      const resVideo = await cloudinary.uploader.upload(video, {
-        folder: 'resepin',
-        resource_type: 'video'
-      })
-      console.log(gambarvid)
-      const idfood = req.params.id
-      const { title, ingrediens } = req.body
-      const data = {
-        title,
-        ingrediens,
-        video: resVideo.url,
-        image: ress.url,
-        idfood
+      const idfood = req.params.id;
+
+      // Fetch the current food item details from the database
+      const currentFood = await foodModel.getDetail(idfood);
+      if (!currentFood || currentFood.length === 0) {
+        return res.status(404).json({ error: "Food item not found." });
       }
-      foodModel
-        .update(data, idfood)
-        .then(() => {
-          common.response(res, data, 'data updated success', 200)
-        })
-        .catch((error) => {
-          console.log(error)
-          next(createError)
-        })
+      const existingData = currentFood[0];
+
+      // Extract files
+      const videoFile = req.files?.video?.[0];
+      const imageFile = req.files?.image?.[0];
+
+      // Upload new files if provided, otherwise retain old ones
+      let videoUrl = existingData.video;
+      let imageUrl = existingData.image;
+
+      if (videoFile) {
+        const videoPath = videoFile.path;
+        const videoUpload = await cloudinary.uploader.upload(videoPath, {
+          folder: "resepin",
+          resource_type: "video",
+        });
+        videoUrl = videoUpload.url;
+      }
+
+      if (imageFile) {
+        const imagePath = imageFile.path;
+        const imageUpload = await cloudinary.uploader.upload(imagePath, {
+          folder: "resepin",
+        });
+        imageUrl = imageUpload.url;
+      }
+
+      // Extract additional data from the request body
+      const { title, ingrediens } = req.body;
+
+      // Prepare the data to be updated
+      const data = {
+        title: title || existingData.title,
+        ingrediens: ingrediens
+          ? ingrediens.split(",")
+          : existingData.ingrediens,
+        video: videoUrl,
+        image: imageUrl,
+        idfood,
+      };
+
+      // Update the database
+      await foodModel.update(data, idfood);
+      common.response(res, data, "Data updated successfully.", 200);
     } catch (error) {
-      console.log(error)
-      next(createError)
+      console.error(error);
+      next(createError(500, "Failed to update food item."));
     }
   },
   deleteFood: (req, res, next) => {
+    console.log("ge");
+
     const idfood = req.params.id
     // const name = req.body.name
+    console.log("tom", req.query, req.params);
+
     foodModel
       .deleteFood(idfood)
       .then(() => {

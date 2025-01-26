@@ -2,9 +2,18 @@ const createError = require('http-errors')
 const jwt = require('jsonwebtoken')
 const protect = (req, res, next) => {
   try {
+    console.log("protectttt");
+    let token
     // if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     //   token = req.headers.authorization.split(' ')[1]
-    const token = req.cookies.token
+    // const token = req.token
+
+    const tokens = req.headers.cookie.match(/token=([^;]+)/);
+    if (tokens) {
+      token = tokens[1]; // Return the captured token
+    } else {
+      throw new Error('Token not found in the cookie string');
+    }
     if (!token) {
       return next(createError(400, 'server need token'))
     }

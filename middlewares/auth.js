@@ -1,6 +1,8 @@
 const createError = require('http-errors')
 const jwt = require('jsonwebtoken')
 const protect = (req, res, next) => {
+  console.log("hi nada");
+
   try {
     let token
     if (
@@ -16,7 +18,7 @@ const protect = (req, res, next) => {
       req.decoded = decoded
       next()
     } else {
-      // console.log(error)
+      console.log("nada", error)
       next(createError(400, 'server need token'))
     }
   } catch (error) {

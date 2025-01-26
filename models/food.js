@@ -13,21 +13,22 @@ const foodModel = {
     })
   },
   insert: (body) => {
-    const { title, ingrediens = [], video, image } = body
+    const { title, ingrediens = [], video, image } = body;
     return new Promise((resolve, reject) => {
       db.query(
-        'INSERT INTO food (title, ingrediens, video, image) VALUES ($1,$2,$3,$4)',
-        [title, ingrediens, video, image],
+        'INSERT INTO food (title, ingrediens, video, image) VALUES ($1, $2::text[], $3, $4)',
+        [title, ingrediens, video, image], // Pass `ingrediens` as an array
         (err, result) => {
           if (!err) {
-            resolve(result.rows)
+            resolve(result.rows);
           } else {
-            reject(new Error(err))
+            reject(new Error(err));
           }
         }
-      )
-    })
+      );
+    });
   },
+
   update: ({ title, ingrediens, video, image, idfood }) => {
     return new Promise((resolve, reject) => {
       db.query(

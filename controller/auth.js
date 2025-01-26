@@ -1,58 +1,68 @@
 const bcrypt = require('bcryptjs')
-const { v4: uuidv4 } = require('uuid')
+const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken')
 const createError = require('http-errors')
 const {
   findByEmail,
   create,
   changePassword,
-  getprofil,
-  activasi
+  getprofile,
+  activasi, updateProfile
 } = require('../models/auth')
 const commonHelper = require('../helper/common')
 const authHelper = require('../helper/authEmployee')
 const { sendMail } = require('../helper/sendEmail')
 
+
 const register = async (req, res, next) => {
   try {
-    const { fullname, email, phonenumber, password } = req.body
-    console.log("Here")
-    const { rowCount } = await findByEmail(email)
+    const { fullname, email, phonenumber, password } = req.body;
 
-    const salt = bcrypt.genSaltSync(10)
-    const passwordHash = bcrypt.hashSync(password, salt)
+    // Check if the email already exists
+    const { rowCount } = await findByEmail(email);
 
     if (rowCount) {
-      return next(createError(403, 'user sudah terdaftar'))
+      return next(new Error('User already exists'));
     }
+
+    // Generate a hashed password
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    // Generate a unique ID for the user
     const data = {
       iduser: uuidv4(),
       fullname,
       email,
       phonenumber,
-      password: passwordHash
-    }
-    console.log("Here2")
-    sendMail({ email, fullname })
-    console.log("Here3")
-    await create(data)
-    commonHelper.response(res, data, 'User berhasil register', 200)
+      password: passwordHash,
+    };
+
+
+    // Save the user to the database
+    const val = await create(data);
+
+    return res.status(201).json({ message: 'User successfully registered', data });
   } catch (error) {
-    console.log("Error is", error)
-    next(createError())
+    console.log(error);
+
+    return res.status(500).json({ message: 'User successfully registered', error });
+
+    next(error);
   }
-}
+};
+
 const activ = async (req, res, next) => {
   try {
     const token = req.params.token
     const decoded = await jwt.verify(token, process.env.SECRET_KEY_JWT)
-    console.log(decoded)
+    console.log("decoded", decoded)
     const data = {
       active: 1,
       email: decoded.email,
       role: decoded.role
     }
-
+    log
     await activasi(data)
     const newPayload = {
       email: decoded.email,
@@ -73,6 +83,8 @@ const activ = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body
+    console.log(req.body);
+
     const {
       rows: [user]
     } = await findByEmail(email)
@@ -80,7 +92,7 @@ const login = async (req, res, next) => {
       return commonHelper.response(
         res,
         null,
-        'email atau password anda salah',
+        'your email or password is incorrect',
         403
       )
     }
@@ -89,13 +101,14 @@ const login = async (req, res, next) => {
     //     message: ' anda belum verifikasi'
     //   })
     // }
+    console.log("NAdaaaa");
 
     const validPassword = bcrypt.compareSync(password, user.password)
     if (!validPassword) {
       return commonHelper.response(
         res,
         null,
-        'email atau password anda salah',
+        'your email or password is incorrect',
         403
       )
     }
@@ -153,23 +166,65 @@ const changePasswordEmployee = (req, res, next) => {
 
 const getProfil = async (req, res, next) => {
   try {
-    const token = req.headers.authorization.split(' ')[1]
-    const decoded = jwt.verify(token, process.env.SECRET_KEY_JWT)
-    const idusers = decoded.id
-    console.log(idusers)
-    const result = await getprofil(idusers)
+    console.log("getProfile", req.decoded?.id);
 
-    commonHelper.response(res, result.rows, 'Get profil data success', 200)
+    const userId = req.decoded?.id;
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid token or user ID." });
+    }
+
+    const profile = await getprofile(userId);
+    console.log("profile", profile);
+
+    if (!profile) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({ status: "success", data: profile });
   } catch (error) {
-    console.log(error)
-    next(createError)
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch profile.", error });
   }
-}
+};
+
+const updateUser = async (req, res, next) => {
+  try {
+    console.log('Uploaded File:', req.file);
+    console.log('Request Body:', req.body);
+
+    const { fullname, email } = req.body;
+    let avatar = null;
+
+    // Check if a file is uploaded and get its local path
+    if (req.file) {
+      avatar = req.file.path; // Use the path from the uploaded file
+    }
+
+    // Prepare data for the database
+    const data = {
+      fullname,
+      email,
+      avatar, // Optional: Save avatar path only if it exists
+    };
+
+    // Update the user profile in the database
+    const dd = await updateProfile(data);
+    console.log("Mama", dd);
+
+    // Send a success response
+    res.status(200).json({ message: 'Profile updated successfully', data });
+  } catch (error) {
+    console.error('Error in updateUser:', error);
+    next(createError(500, 'Failed to update profile'));
+  }
+};
+
+
 module.exports = {
   register,
   login,
   refreshToken,
   changePasswordEmployee,
   getProfil,
-  activ
+  activ, updateUser
 }
