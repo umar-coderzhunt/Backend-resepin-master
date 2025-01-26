@@ -37,6 +37,7 @@ const corsOptions = {
   origin: 'http://localhost:3000', // Allow requests from this origin
   credentials: true,              // Allow credentials (cookies, authorization headers)
 };
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.use(cors(corsOptions));
 app.use((err, req, res, next) => {

@@ -41,7 +41,7 @@ const register = async (req, res, next) => {
 
     // Save the user to the database
     const val = await create(data);
-
+    sendMail({ email, fullname })
     return res.status(201).json({ message: 'User successfully registered', data });
   } catch (error) {
     console.log(error);
@@ -62,7 +62,6 @@ const activ = async (req, res, next) => {
       email: decoded.email,
       role: decoded.role
     }
-    log
     await activasi(data)
     const newPayload = {
       email: decoded.email,
@@ -74,7 +73,7 @@ const activ = async (req, res, next) => {
     if (decoded.status === '1') {
       return res.json({ message: 'akun anda sudah terverifikasi' })
     }
-    res.redirect('https://resepin-aja.vercel.app/login')
+    res.redirect('http://localhost:3000/login')
   } catch (error) {
     console.log(error)
     next(createError)
@@ -197,7 +196,7 @@ const updateUser = async (req, res, next) => {
 
     // Check if a file is uploaded and get its local path
     if (req.file) {
-      avatar = req.file.path; // Use the path from the uploaded file
+      avatar = `/uploads/${req.file.filename}`;
     }
 
     // Prepare data for the database
